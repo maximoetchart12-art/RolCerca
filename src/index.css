@@ -40,6 +40,11 @@
   height: 100%;
 }
 
+/* OpenStreetMap Free Dark Fantasy Tile Theme (No API Key Required) */
+.osm-dark-tiles {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.75) !important;
+}
+
 .leaflet-popup-content-wrapper {
   background: #161618 !important;
   color: #f1f5f9 !important;

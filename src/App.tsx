@@ -74,7 +74,10 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter((item: any) => item && item.id && item.title);
+          const parsedClean = parsed.filter((item: any) => item && item.id && item.title);
+          const existingIds = new Set(parsedClean.map((t: any) => t.id));
+          const missingInitial = INITIAL_TABLES.filter(t => !existingIds.has(t.id));
+          return [...parsedClean, ...missingInitial];
         }
       }
     } catch (e) {
@@ -188,11 +191,11 @@ export default function App() {
         if (incomingTables.length === 0) {
           incomingTables = [...INITIAL_TABLES];
         } else {
-          // Si hay tablas, asegurémonos de incluir las INITIAL_TABLES si no están
-          const mockIds = INITIAL_TABLES.map(t => t.id);
-          const hasMocks = incomingTables.some((t: any) => mockIds.includes(t.id));
-          if (!hasMocks) {
-            incomingTables = [...incomingTables, ...INITIAL_TABLES];
+          // Merge any initial mock tables that are not yet in server tables
+          const existingIds = new Set(incomingTables.map((t: any) => t.id));
+          const missingInitial = INITIAL_TABLES.filter(t => !existingIds.has(t.id));
+          if (missingInitial.length > 0) {
+            incomingTables = [...incomingTables, ...missingInitial];
           }
         }
         setTables(incomingTables);

@@ -261,7 +261,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   <span>Herramientas de Seguridad en Mesa</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {table.safetyInfo.tools.map((tool, idx) => (
+                  {(table.safetyInfo?.tools || []).map((tool, idx) => (
                     <div
                       key={idx}
                       className="p-2.5 rounded-lg bg-[#0F0F11] border border-emerald-950/60 text-xs text-emerald-200 flex items-center gap-2"
@@ -294,7 +294,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                     </div>
                   </div>
 
-                  {table.spacePhotos.length > 1 && (
+                  {table.spacePhotos && table.spacePhotos.length > 1 && (
                     <div className="flex gap-2">
                       {table.spacePhotos.map((photo, i) => (
                         <button
@@ -322,7 +322,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                     <span>Reglas de Convivencia</span>
                   </div>
                   <ul className="space-y-1 text-[#cbd5e1] list-disc list-inside">
-                    {table.safetyInfo.houseRules.map((rule, idx) => (
+                    {(table.safetyInfo?.houseRules || []).map((rule, idx) => (
                       <li key={idx}>{rule}</li>
                     ))}
                   </ul>
@@ -395,7 +395,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   Estilo de Narración del GM
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {table.dm.dmStyle.map((style, i) => (
+                  {(table.dm.dmStyle || []).map((style, i) => (
                     <span
                       key={i}
                       className="px-3 py-1 rounded-lg bg-[#242429] text-rose-200 border border-[#2A2A2E] text-xs font-semibold"
@@ -418,7 +418,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {table.dm.reviews.map((rev) => (
+                    {(table.dm.reviews || []).map((rev) => (
                       <div
                         key={rev.id}
                         className="p-3.5 rounded-xl bg-[#0F0F11] border border-[#2A2A2E] space-y-1.5"
@@ -476,7 +476,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   Estilo de Juego & Temáticas
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {table.tags.map((t, i) => (
+                  {(table.tags || []).map((t, i) => (
                     <span
                       key={i}
                       className="px-2.5 py-1 rounded-lg bg-[#0F0F11] text-[#cbd5e1] border border-[#2A2A2E] text-xs font-medium"

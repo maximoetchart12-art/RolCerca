@@ -108,11 +108,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     // Zoom control at top right
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Dark fantasy tile layer (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20,
+    // OpenStreetMap free tile layer with dark styling class (no API key required)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abc',
+      maxZoom: 19,
+      className: 'osm-dark-tiles',
     }).addTo(map);
 
     const markersGroup = L.layerGroup().addTo(map);

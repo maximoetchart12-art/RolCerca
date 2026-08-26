@@ -248,5 +248,218 @@ export const INITIAL_TABLES: TableSession[] = [
     coverImage: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop',
     costPerSession: 'Gratis',
     createdAt: new Date().toISOString()
+  },
+  {
+    id: 'mesa-navarro-laguna-dnd5e',
+    title: 'Misterios en la Laguna de Navarro',
+    system: 'D&D 5e',
+    synopsis: 'Una emocionante campaña de exploración y supervivencia donde una compañía de aventureros investiga extraños sucesos y ruinas anegadas en las orillas de una mística laguna.',
+    setting: 'Fantasía Medieval & Supervivencia / Reinos Olvidados',
+    levelRequired: 'Apto Principiantes',
+    tags: ['Exploración', 'Rol Inmersivo', 'Principiantes'],
+    slotsTotal: 5,
+    slotsTaken: 2,
+    venueType: 'store',
+    venueName: 'Club Social & Lúdico Navarro',
+    addressApprox: 'Calle 107 y Calle 24 (cerca de Plaza San Lorenzo y Laguna)',
+    zone: 'Navarro',
+    region: 'PBA Interior',
+    coordinates: { lat: -34.9961, lng: -59.2778 },
+    schedule: {
+      frequency: 'Quincenal',
+      dayOfWeek: 'Sábado',
+      time: '16:30',
+      durationHours: 4,
+      nextSessionDate: '2026-09-12'
+    },
+    verifiedStatus: {
+      isVerified: true,
+      type: 'store_verified',
+      badgeLabel: 'Club Lúdico Verificado',
+      verifiedDate: '2026-04-15',
+      dniValidated: true,
+      addressValidated: true,
+      safetyAudited: true
+    },
+    dm: {
+      id: 'dm-005',
+      name: 'Emiliano Rossi',
+      handle: '@emi_navarro_dm',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      bio: 'Master apasionado por la narrativa inmersiva y la creación de mundos. Bienvenidos tanto jugadores novatos como veteranos.',
+      experienceYears: 4,
+      campaignsFinished: 2,
+      rating: 4.9,
+      reviewCount: 18,
+      badges: ['Master Verificado', 'Iniciación Amigable'],
+      reviews: [
+        {
+          id: 'rev-navarro-1',
+          authorName: 'Camila G.',
+          authorAvatar: '',
+          date: '2026-07-20',
+          rating: 5,
+          comment: 'Hermoso grupo y el master explica todo con una paciencia increíble.',
+          campaignPlayed: 'D&D 5e - Campaña Laguna'
+        }
+      ]
+    },
+    safetyInfo: {
+      tools: ['Tarjeta X', 'Líneas y Velos', 'Puerta Abierta', 'Sesión Cero'],
+      atmosphere: 'Distendida, mateada y rol amigable',
+      houseRules: ['Puntualidad y buena onda', 'Apto todo público'],
+      smokingPolicy: 'Patio al aire libre disponible',
+      petInfo: 'Sin mascotas en la sala de juego',
+      accessibility: 'Planta baja con rampa de acceso',
+      snacksPolicy: 'Traer mate y cosas para compartir'
+    },
+    spacePhotos: [
+      { url: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800&auto=format&fit=crop&q=80', caption: 'Espacio de juego en Club Social Navarro', tag: 'Mesa Principal' }
+    ],
+    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop',
+    costPerSession: 'Bono contribución $2000 (incluye sala)',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'mesa-lobos-cthulhu',
+    title: 'La Sombra sobre Lobos: Años 1920',
+    system: 'Call of Cthulhu',
+    synopsis: 'Un grupo de investigadores llega a las casonas centenarias de la zona tras misteriosas desapariciones vinculadas a un eclipse de luna y extraños cultos campestres.',
+    setting: 'Horror Cósmico & Misterio Rural / Años 20',
+    levelRequired: 'Nivel Medio',
+    tags: ['Misterio', 'Investigación', 'Horror Cósmico', 'Roleplay'],
+    slotsTotal: 4,
+    slotsTaken: 3,
+    venueType: 'private_home',
+    venueName: 'Casona de Juani (Anfitrión Verificado)',
+    addressApprox: 'Calle 9 de Julio 350, Centro de Lobos',
+    zone: 'Lobos',
+    region: 'PBA Interior',
+    coordinates: { lat: -35.1856, lng: -59.0964 },
+    schedule: {
+      frequency: 'Quincenal',
+      dayOfWeek: 'Domingo',
+      time: '17:00',
+      durationHours: 4,
+      nextSessionDate: '2026-09-13'
+    },
+    verifiedStatus: {
+      isVerified: true,
+      type: 'host_verified',
+      badgeLabel: 'Anfitrión Verificado (+18)',
+      verifiedDate: '2026-05-22',
+      dniValidated: true,
+      addressValidated: true,
+      safetyAudited: true
+    },
+    dm: {
+      id: 'dm-006',
+      name: 'Juan Ignacio (Juani)',
+      handle: '@juani_cthulhu_lobos',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      bio: 'Guardián de los Arcanos desde hace 6 años. Gran ambientación con velas, efectos de sonido y pistas físicas en papel envejecido.',
+      experienceYears: 6,
+      campaignsFinished: 4,
+      rating: 5.0,
+      reviewCount: 23,
+      badges: ['Master Verificado', 'Atmósfera Top'],
+      reviews: [
+        {
+          id: 'rev-lobos-1',
+          authorName: 'Gonzalo R.',
+          authorAvatar: '',
+          date: '2026-08-10',
+          rating: 5,
+          comment: 'La mejor ambientación de Call of Cthulhu de la provincia, te hace meter de lleno en la trama.',
+          campaignPlayed: 'Call of Cthulhu - Sombras de la Pampa'
+        }
+      ]
+    },
+    safetyInfo: {
+      tools: ['Tarjeta X', 'Líneas y Velos', 'Puerta Abierta'],
+      atmosphere: 'Inmersiva, suspenso y música ambiental suave',
+      houseRules: ['Respeto por el clima de terror', 'Mayor de 18 años'],
+      smokingPolicy: 'Patio exterior disponible',
+      petInfo: 'Un perro rescatado muy tranquilo en el patio',
+      accessibility: 'Casa en planta baja',
+      snacksPolicy: 'Cafetería y galletitas incluidas / A la canasta'
+    },
+    spacePhotos: [
+      { url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80', caption: 'Sala de juego acondicionada en Lobos', tag: 'Sala de Juego' }
+    ],
+    coverImage: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=800&auto=format&fit=crop',
+    costPerSession: 'A la gorra / Aporte refrigerio ($1500)',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'mesa-mercedes-pathfinder',
+    title: 'Crónicas de la Frontera Oeste',
+    system: 'Pathfinder 2e',
+    synopsis: 'Una épica campaña de alta fantasía y táctica. Los héroes han sido contratados por el Consejo Local para cartografiar y proteger antiguas ruinas subterráneas repletas de tesoros y trampas.',
+    setting: 'Alta Fantasía & Combate Táctico / Golarion',
+    levelRequired: 'Todos los niveles',
+    tags: ['Combate Táctico', 'Mapas con Miniaturas', 'Fantasía Épica'],
+    slotsTotal: 6,
+    slotsTaken: 4,
+    venueType: 'store',
+    venueName: 'Espacio Lúdico & Comic Mercedes',
+    addressApprox: 'Calle 25 e/ 20 y 22, Centro de Mercedes',
+    zone: 'Mercedes',
+    region: 'PBA Interior',
+    coordinates: { lat: -34.6514, lng: -59.4308 },
+    schedule: {
+      frequency: 'Semanal',
+      dayOfWeek: 'Viernes',
+      time: '19:30',
+      durationHours: 4,
+      nextSessionDate: '2026-09-11'
+    },
+    verifiedStatus: {
+      isVerified: true,
+      type: 'store_verified',
+      badgeLabel: 'Tienda Oficial',
+      verifiedDate: '2026-02-18',
+      dniValidated: true,
+      addressValidated: true,
+      safetyAudited: true
+    },
+    dm: {
+      id: 'dm-007',
+      name: 'Federico "Fede" Albornoz',
+      handle: '@fede_pathfinder_mercedes',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+      bio: 'Fanático de Pathfinder 2e y las miniaturas pintadas a mano. Llevo más de 7 años dirigiendo partidas presenciales.',
+      experienceYears: 7,
+      campaignsFinished: 6,
+      rating: 4.9,
+      reviewCount: 31,
+      badges: ['Master Veterano', 'Miniaturas & Grid 3D'],
+      reviews: [
+        {
+          id: 'rev-mercedes-1',
+          authorName: 'Matías L.',
+          authorAvatar: '',
+          date: '2026-07-28',
+          rating: 5,
+          comment: 'Los mapas con miniaturas y el ritmo de los combates son una locura. Muy recomendado.',
+          campaignPlayed: 'Pathfinder 2e - Frontera Oeste'
+        }
+      ]
+    },
+    safetyInfo: {
+      tools: ['Tarjeta X', 'Líneas y Velos', 'Protocolo de Puertas Abiertas'],
+      atmosphere: 'Competitiva pero cooperativa, emocionante',
+      houseRules: ['Puntualidad', 'Cuidar las miniaturas de la mesa'],
+      smokingPolicy: 'No se fuma en el local comercial',
+      petInfo: 'Local pet-friendly (con correa)',
+      accessibility: 'Entrada sin escalones, salón amplio',
+      snacksPolicy: 'Consumición libre en cafetería del local'
+    },
+    spacePhotos: [
+      { url: 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=800&auto=format&fit=crop&q=80', caption: 'Mesa de juego con miniaturas y escenografía 3D en Mercedes', tag: 'Mesa Principal' }
+    ],
+    coverImage: 'https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=800&auto=format&fit=crop',
+    costPerSession: 'Consumición en cafetería / Entrada $2500',
+    createdAt: new Date().toISOString()
   }
 ];
