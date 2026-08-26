@@ -64,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false);
+  const [showSearch, setShowSearch] = React.useState(false);
 
   const systemsList = [
     'Todos',
@@ -252,113 +253,143 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Main Filter & Search Bar */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 bg-[#161618]/90 border-t border-[#2A2A2E]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
-          {/* MD3 Style Search Bar */}
-          <div className="lg:col-span-7 relative group">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="w-5 h-5 text-[#9ca3af] group-focus-within:text-[#fecdd3] transition-colors" />
-            </div>
-            <input
-              id="input-search-tables"
-              type="text"
-              placeholder="Buscar por ciudad, barrio, campaña o sistema..."
-              value={filters.searchQuery}
-              onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value })}
-              className="block w-full pl-11 pr-10 py-2.5 sm:py-3 bg-[#1e1e24] border-none text-[#f8fafc] text-sm rounded-full shadow-md shadow-black/20 focus:ring-2 focus:ring-[#800020] focus:bg-[#25252b] transition-all outline-none placeholder:text-[#6b7280]"
-            />
-            {filters.searchQuery && (
-              <button
-                onClick={() => onFilterChange({ ...filters, searchQuery: '' })}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-[#6b7280] hover:text-[#f8fafc] cursor-pointer transition-colors"
+        <div className="flex items-center justify-between gap-2 text-xs">
+          {/* Left side: Search Icon + active filters indicator */}
+          <div className="flex flex-1 items-center gap-2">
+            {!showSearch ? (
+              <button 
+                onClick={() => setShowSearch(true)} 
+                className="p-2 rounded-lg text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#242429] transition-colors cursor-pointer flex items-center gap-2"
               >
-                <X className="w-5 h-5" />
+                <Search className="w-4 h-4" />
+                <span className="text-[#6b7280] hidden sm:inline">Buscar mesas...</span>
               </button>
+            ) : (
+              <div className="relative flex items-center w-full max-w-xs animate-in slide-in-from-left-2 fade-in duration-200">
+                <input
+                  id="input-search-tables"
+                  type="text"
+                  autoFocus
+                  placeholder="Buscar ciudad, barrio, sistema..."
+                  value={filters.searchQuery}
+                  onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value })}
+                  className="block w-full pl-8 pr-8 py-1.5 bg-[#1e1e24] border border-[#3f3f46] text-[#f8fafc] text-xs rounded-full focus:ring-1 focus:ring-[#800020] focus:border-[#800020] outline-none transition-all"
+                />
+                <Search className="w-3.5 h-3.5 text-[#9ca3af] absolute left-3" />
+                <button
+                  onClick={() => { setShowSearch(false); onFilterChange({ ...filters, searchQuery: '' }) }}
+                  className="absolute right-2 p-1 text-[#6b7280] hover:text-[#f8fafc] cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+            
+            {/* Minimalist count / applied filters */}
+            {!showSearch && (
+              <div className="flex items-center gap-1.5 ml-2">
+                <span className="text-[#6b7280] font-medium hidden sm:inline-block">
+                  {filteredCount} {filteredCount === 1 ? 'mesa' : 'mesas'}
+                </span>
+                {hasActiveFilters && (
+                  <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]" title="Filtros aplicados"></span>
+                )}
+              </div>
             )}
           </div>
 
-          {/* System Selector */}
-          <div className="lg:col-span-2 flex items-center gap-1.5 bg-[#0F0F11] rounded-lg border border-[#2A2A2E] px-2.5 py-1">
-            <Scroll className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <select
-              id="select-system"
-              value={filters.system}
-              onChange={(e) => onFilterChange({ ...filters, system: e.target.value })}
-              className="w-full bg-transparent text-xs text-[#e2e8f0] focus:outline-none cursor-pointer"
-            >
-              {systemsList.map((s) => (
-                <option key={s} value={s} className="bg-[#161618] text-[#e2e8f0]">
-                  {s === 'Todos' ? 'Todos los Sistemas' : s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Venue Type Quick Chips */}
-          <div className="lg:col-span-3 flex items-center justify-between sm:justify-end gap-2">
-            <div className="inline-flex rounded-lg p-0.5 bg-[#0F0F11] border border-[#2A2A2E] text-xs">
+          {/* Right side: View controls & Filters toggle */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1 bg-[#0F0F11] p-0.5 rounded-lg border border-[#2A2A2E] hidden sm:flex">
               <button
-                id="btn-venue-all"
-                onClick={() => onFilterChange({ ...filters, venueType: 'all' })}
-                className={`px-2 py-1 rounded-md font-medium transition-all cursor-pointer ${
-                  filters.venueType === 'all'
-                    ? 'bg-[#242429] text-white shadow-sm font-semibold'
+                id="view-btn-split"
+                onClick={() => onViewModeChange('split')}
+                className={`px-2 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                  viewMode === 'split'
+                    ? 'bg-[#800020] text-white font-semibold shadow'
                     : 'text-[#94a3b8] hover:text-[#f1f5f9]'
                 }`}
+                title="Vista dividida de mapa y lista"
               >
-                Todas
+                Dividido
               </button>
               <button
-                id="btn-venue-store"
-                onClick={() => onFilterChange({ ...filters, venueType: 'store' })}
-                className={`px-2 py-1 rounded-md font-medium flex items-center gap-1 transition-all cursor-pointer ${
-                  filters.venueType === 'store'
-                    ? 'bg-emerald-950 text-emerald-200 border border-emerald-700 shadow-sm font-semibold'
-                    : 'text-[#94a3b8] hover:text-emerald-300'
+                id="view-btn-list"
+                onClick={() => onViewModeChange('list')}
+                className={`px-2 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-[#800020] text-white font-semibold shadow'
+                    : 'text-[#94a3b8] hover:text-[#f1f5f9]'
                 }`}
-                title="Tiendas y clubes lúdicos oficiales (Apto Menores)"
+                title="Solo lista de mesas"
               >
-                <Store className="w-3 h-3 text-emerald-400" />
-                <span>Público</span>
+                Lista
               </button>
               <button
-                id="btn-venue-home"
-                onClick={() => onFilterChange({ ...filters, venueType: 'private_home' })}
-                className={`px-2 py-1 rounded-md font-medium flex items-center gap-1 transition-all cursor-pointer ${
-                  filters.venueType === 'private_home'
-                    ? 'bg-amber-950 text-amber-200 border border-amber-600/70 shadow-sm font-semibold'
-                    : 'text-[#94a3b8] hover:text-amber-300'
+                id="view-btn-map"
+                onClick={() => onViewModeChange('map')}
+                className={`px-2 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                  viewMode === 'map'
+                    ? 'bg-[#800020] text-white font-semibold shadow'
+                    : 'text-[#94a3b8] hover:text-[#f1f5f9]'
                 }`}
-                title="Casas particulares de anfitriones verificados (+18)"
+                title="Solo mapa de Argentina"
               >
-                <Home className="w-3 h-3 text-amber-400" />
-                <span>Privado (+18)</span>
+                Mapa
               </button>
             </div>
-
-            {/* Toggle Advanced */}
+            
             <button
               id="btn-toggle-advanced-filters"
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              className={`p-1.5 sm:p-2 rounded-lg border transition-colors cursor-pointer flex items-center gap-1.5 ${
                 showAdvancedFilters || hasActiveFilters
                   ? 'bg-[#242429] border-[#800020] text-rose-400'
                   : 'bg-[#0F0F11] border-[#2A2A2E] text-[#94a3b8] hover:text-[#f1f5f9]'
               }`}
-              title="Más filtros de nivel y distancia"
+              title="Filtros"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <SlidersHorizontal className="w-4 h-4" />
+              <span className="hidden sm:inline font-medium">Filtros</span>
             </button>
           </div>
         </div>
 
         {/* Expanded Filters Drawer */}
         {showAdvancedFilters && (
-          <div className="mt-2 pt-2 border-t border-[#2A2A2E] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs animate-in fade-in duration-150">
+          <div className="mt-3 pt-3 border-t border-[#2A2A2E] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs animate-in fade-in duration-150">
+            {/* System Selector */}
+            <div>
+              <label className="text-[#94a3b8] block mb-1 font-medium">Sistema de juego:</label>
+              <select
+                value={filters.system}
+                onChange={(e) => onFilterChange({ ...filters, system: e.target.value })}
+                className="w-full bg-[#0F0F11] text-[#e2e8f0] rounded-md border border-[#2A2A2E] px-2.5 py-1.5 focus:outline-none focus:border-[#800020]"
+              >
+                {systemsList.map((s) => (
+                  <option key={s} value={s}>{s === 'Todos' ? 'Todos los Sistemas' : s}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Venue Type */}
+            <div>
+              <label className="text-[#94a3b8] block mb-1 font-medium">Tipo de lugar:</label>
+              <select
+                value={filters.venueType}
+                onChange={(e) => onFilterChange({ ...filters, venueType: e.target.value })}
+                className="w-full bg-[#0F0F11] text-[#e2e8f0] rounded-md border border-[#2A2A2E] px-2.5 py-1.5 focus:outline-none focus:border-[#800020]"
+              >
+                <option value="all">Todas las mesas</option>
+                <option value="store">Públicas (Tiendas/Clubes)</option>
+                <option value="private_home">Privadas (Casas +18)</option>
+              </select>
+            </div>
+
             {/* Distance Radius */}
             <div>
               <label className="text-[#94a3b8] block mb-1 font-medium">Radio de distancia:</label>
               <select
-                id="select-distance-radius"
                 value={filters.maxDistanceKm === null ? '' : filters.maxDistanceKm}
                 onChange={(e) => 
                   onFilterChange({ 
@@ -380,15 +411,14 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <label className="text-[#94a3b8] block mb-1 font-medium">Nivel de experiencia:</label>
               <select
-                id="select-experience-level"
                 value={filters.experienceLevel}
                 onChange={(e) => onFilterChange({ ...filters, experienceLevel: e.target.value })}
                 className="w-full bg-[#0F0F11] text-[#e2e8f0] rounded-md border border-[#2A2A2E] px-2.5 py-1.5 focus:outline-none focus:border-[#800020]"
               >
                 <option value="all">Todos los niveles</option>
-                <option value="Apto Principiantes">Apto Principiantes (Iniciación)</option>
+                <option value="Apto Principiantes">Apto Principiantes</option>
                 <option value="Nivel Medio">Nivel Medio</option>
-                <option value="Veteranos">Veteranos / Campañas Complejas</option>
+                <option value="Veteranos">Veteranos / Complejas</option>
               </select>
             </div>
 
@@ -396,20 +426,18 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-end">
               <label className="flex items-center gap-2 cursor-pointer py-1.5 px-2 bg-[#0F0F11] rounded-md border border-[#2A2A2E] w-full hover:border-[#3f3f46]">
                 <input
-                  id="chk-available-slots-only"
                   type="checkbox"
                   checked={filters.availableOnly}
                   onChange={(e) => onFilterChange({ ...filters, availableOnly: e.target.checked })}
                   className="rounded border-[#3f3f46] text-[#800020] focus:ring-[#800020] h-4 w-4 bg-[#161618]"
                 />
-                <span className="text-[#cbd5e1] font-medium">Solo mesas con cupos libres</span>
+                <span className="text-[#cbd5e1] font-medium truncate">Solo cupos libres</span>
               </label>
             </div>
 
             {/* Reset Button */}
             <div className="flex items-end">
               <button
-                id="btn-reset-filters"
                 onClick={resetFilters}
                 disabled={!hasActiveFilters}
                 className={`w-full py-1.5 px-3 rounded-md font-medium text-center transition-all ${
@@ -418,65 +446,11 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'bg-[#0F0F11] text-[#52525b] border border-[#2A2A2E] cursor-not-allowed'
                 }`}
               >
-                Restablecer filtros
+                Limpiar Filtros
               </button>
             </div>
           </div>
         )}
-
-        {/* Results Bar and Layout Switch */}
-        <div className="mt-2 flex items-center justify-between text-xs text-[#94a3b8]">
-          <div className="flex items-center gap-2">
-            <span>
-              Mostrando <strong className="text-[#f1f5f9] font-semibold">{filteredCount}</strong> de {totalTablesCount} mesas activas
-            </span>
-            {hasActiveFilters && (
-              <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-[#800020]/30 text-rose-200 border border-[#800020]/60 text-[10px]">
-                Filtros aplicados
-              </span>
-            )}
-          </div>
-
-          {/* View Mode Controls */}
-          <div className="flex items-center gap-1 bg-[#0F0F11] p-0.5 rounded-lg border border-[#2A2A2E]">
-            <button
-              id="view-btn-split"
-              onClick={() => onViewModeChange('split')}
-              className={`px-2 py-0.5 rounded text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'split'
-                  ? 'bg-[#800020] text-white font-semibold shadow'
-                  : 'text-[#94a3b8] hover:text-[#f1f5f9]'
-              }`}
-              title="Vista dividida de mapa y lista"
-            >
-              Dividido
-            </button>
-            <button
-              id="view-btn-list"
-              onClick={() => onViewModeChange('list')}
-              className={`px-2 py-0.5 rounded text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-[#800020] text-white font-semibold shadow'
-                  : 'text-[#94a3b8] hover:text-[#f1f5f9]'
-              }`}
-              title="Solo lista de mesas"
-            >
-              Lista
-            </button>
-            <button
-              id="view-btn-map"
-              onClick={() => onViewModeChange('map')}
-              className={`px-2 py-0.5 rounded text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'map'
-                  ? 'bg-[#800020] text-white font-semibold shadow'
-                  : 'text-[#94a3b8] hover:text-[#f1f5f9]'
-              }`}
-              title="Solo mapa de Argentina"
-            >
-              Mapa
-            </button>
-          </div>
-        </div>
       </div>
     </header>
   );
