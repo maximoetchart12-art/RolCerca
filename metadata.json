@@ -1,0 +1,6 @@
+{
+  "name": "RolCerca",
+  "description": "Buscador y plataforma interactiva de partidas presenciales de D&D y juegos de rol en Argentina con mapa interactivo, filtros de ubicación, sedes y anfitriones verificados.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

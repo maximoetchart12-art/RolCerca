@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="120" fill="#0F0F11"/>
+  <!-- Map Folded Background Effect -->
+  <path d="M96 140L192 100L320 140L416 100V360L320 400L192 360L96 400V140Z" fill="#18181B" stroke="#27272A" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M192 100V360" stroke="#3F3F46" stroke-width="6" stroke-dasharray="8 8"/>
+  <path d="M320 140V400" stroke="#3F3F46" stroke-width="6" stroke-dasharray="8 8"/>
+  <!-- Glowing Map Pin with integrated D20 Dice -->
+  <path d="M256 70C180 70 120 130 120 206C120 306 242 418 248 424C252 428 260 428 264 424C270 418 392 306 392 206C392 130 332 70 256 70Z" fill="#800020" stroke="#E11D48" stroke-width="12"/>
+  <!-- Minimalist D20 Polygons inside Pin -->
+  <g transform="translate(160, 116) scale(8)">
+    <polygon points="12,1 23,7 23,17 12,23 1,17 1,7" fill="#0F0F11" stroke="#FECDD3" stroke-width="1.2" stroke-linejoin="round"/>
+    <polygon points="12,1 18,12 6,12" fill="#E11D48" stroke="#FECDD3" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="12,1 23,7 18,12" fill="#BE123C" stroke="#FECDD3" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="12,1 1,7 6,12" fill="#9F1239" stroke="#FECDD3" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="6,12 18,12 12,23" fill="#881337" stroke="#FECDD3" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="1,7 6,12 1,17" fill="#4C0519" stroke="#FECDD3" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="23,7 18,12 23,17" fill="#4C0519" stroke="#FECDD3" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="6,12 1,17 12,23" fill="#881337" stroke="#FECDD3" stroke-width="0.8" stroke-linejoin="round"/>
+    <polygon points="18,12 23,17 12,23" fill="#881337" stroke="#FECDD3" stroke-width="0.8" stroke-linejoin="round"/>
+  </g>
+</svg>

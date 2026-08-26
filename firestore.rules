@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    
+    // Admin checking: assuming 'admin' or 'moderator' role in the user's document
+    function isAdmin() {
+      return isSignedIn() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator');
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    // User validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'role']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.role is string && (data.role == 'guest' || data.role == 'minor' || data.role == 'adult_verified' || data.role == 'moderator' || data.role == 'admin');
+    }
+
+    match /users/{userId} {
+      // Users can read their own profile, admins can read all profiles.
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      // No blanket list queries except for admins
+      allow list: if isAdmin();
+      
+      // Users can create their profile but cannot assign themselves 'admin' or 'moderator'.
+      allow create: if isValidId(userId) && isOwner(userId) && 
+                    isValidUser(incoming()) && 
+                    (incoming().role == 'guest' || incoming().role == 'minor' || incoming().role == 'adult_verified');
+                    
+      // Users can update their own non-RBAC fields, or Admins can update anything.
+      allow update: if isValidId(userId) && isValidUser(incoming()) && (
+        isAdmin() ||
+        (isOwner(userId) && 
+         incoming().diff(existing()).affectedKeys().hasAny(['name', 'handle', 'birthDate', 'age', 'dni', 'isVerified']) &&
+         !incoming().diff(existing()).affectedKeys().hasAny(['role', 'email']) &&
+         incoming().role == existing().role
+        )
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    // Table Validation
+    function isValidTable(data) {
+      return data.keys().hasAll(['title', 'ownerId', 'status', 'createdAt']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.ownerId is string && data.ownerId == request.auth.uid &&
+             data.status is string && (data.status == 'open' || data.status == 'closed' || data.status == 'completed');
+    }
+
+    match /tables/{tableId} {
+      // Anyone can get/list tables
+      allow read: if isValidId(tableId);
+      
+      // Creating tables: Must be signed in, ownerId must be their uid, role must not be minor.
+      allow create: if isValidId(tableId) && isSignedIn() &&
+                    isValidTable(incoming()) &&
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'minor';
+      
+      // Updating tables: Must be owner or admin.
+      allow update: if isValidId(tableId) && isValidTable(incoming()) && (
+        isAdmin() ||
+        (existing().ownerId == request.auth.uid && incoming().ownerId == existing().ownerId)
+      );
+      
+      allow delete: if isAdmin();
+    }
+  }
+}
