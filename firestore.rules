@@ -16,7 +16,7 @@ service cloud.firestore {
     // Admin checking: assuming 'admin' or 'moderator' role in the user's document
     function isAdmin() {
       return isSignedIn() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator');
     }
 
@@ -46,7 +46,7 @@ service cloud.firestore {
       // Users can update their own non-RBAC fields, or Admins can update anything.
       allow update: if isValidId(userId) && isValidUser(incoming()) && (
         isAdmin() ||
-        (isOwner(userId) && 
+        (isOwner(userId) &&
          incoming().diff(existing()).affectedKeys().hasAny(['name', 'handle', 'birthDate', 'age', 'dni', 'isVerified']) &&
          !incoming().diff(existing()).affectedKeys().hasAny(['role', 'email']) &&
          incoming().role == existing().role
