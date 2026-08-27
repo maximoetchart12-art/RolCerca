@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { auth, db } from '../lib/firebase';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { AppUser, calculateAgeFromBirthDate, UserRole } from '../types';
 
@@ -51,6 +51,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   const [isGoogleVerifiedEmail, setIsGoogleVerifiedEmail] = useState(false);
   const [googleAvatarUrl, setGoogleAvatarUrl] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Password Visibility toggles
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -137,6 +138,10 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
 
     } catch (err: any) {
       console.warn("Google Auth hook error:", err);
+      if (err.code === 'auth/popup-closed-by-user' || (err.message && err.message.includes('popup-closed-by-user'))) {
+        setIsGoogleLoading(false);
+        return;
+      }
       setFormError('Error al conectar con Google: ' + err.message);
       setIsGoogleLoading(false);
     }
@@ -198,56 +203,32 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   // DNI Validation (Argentina DNI: 7 or 8 digits)
   const isDniValid = /^[0-9]{7,8}$/.test(dni.trim());
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginIdentifier.trim() || !loginPassword.trim()) {
-      setFormError('Por favor ingresá tu email/usuario y contraseña.');
+      setFormError('Por favor ingresá tu email y contraseña.');
       return;
     }
+    
+    setIsLoading(true);
+    setFormError(null);
     try {
-      const saved = localStorage.getItem('rolcerca_current_user_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (
-          parsed.email?.toLowerCase() === loginIdentifier.trim().toLowerCase() ||
-          parsed.handle?.toLowerCase() === loginIdentifier.trim().toLowerCase() ||
-          parsed.dni === loginIdentifier.trim()
-        ) {
-          onRegisterSuccess(parsed);
-          onClose();
-          return;
-        }
+      const userCredential = await signInWithEmailAndPassword(auth, loginIdentifier.trim(), loginPassword.trim());
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as AppUser;
+        onRegisterSuccess({ ...userData, id: userCredential.user.uid });
+        onClose();
+      } else {
+        setFormError('Usuario no encontrado en la base de datos.');
       }
-    } catch {
-      // ignore
+    } catch (err: any) {
+      console.error('Error logging in:', err);
+      setFormError('Credenciales incorrectas o el usuario no existe.');
+    } finally {
+      setIsLoading(false);
     }
-
-    const isAdultLogin = !loginIdentifier.toLowerCase().includes('menor');
-    const loggedUser: AppUser = {
-      id: 'usr-' + Date.now(),
-      name: loginIdentifier.includes('@') ? loginIdentifier.split('@')[0] : loginIdentifier,
-      handle: loginIdentifier.startsWith('@') ? loginIdentifier : `@${loginIdentifier.replace(/\s+/g, '_')}`,
-      email: loginIdentifier.includes('@') ? loginIdentifier : `${loginIdentifier.toLowerCase()}@gmail.com`,
-      isEmailVerified: true,
-      emailVerifiedAt: new Date().toISOString(),
-      role: isAdultLogin ? 'adult_verified' : 'minor',
-      birthDate: isAdultLogin ? '1995-06-15' : '2009-08-10',
-      age: isAdultLogin ? 29 : 15,
-      ageCategory: isAdultLogin ? 'ADULTO' : 'MENOR_JUVENIL',
-      dni: '38123456',
-      dniFrontPhoto: '',
-      verificationStatus: 'VERIFICADO',
-      isVerified: true,
-      registeredAt: new Date().toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }),
-      verifiedAt: 'Sesión Iniciada',
-    };
-
-    onRegisterSuccess(loggedUser);
-    onClose();
   };
 
   // Submit Step 1: Validates account, DNI info AND required photo file
@@ -358,6 +339,8 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   };
 
   const finalizeAccountCreation = async () => {
+    setIsLoading(true);
+    setFormError(null);
     const isAdult = ageResult.category === 'ADULTO';
     let finalRole: UserRole = isAdult ? 'adult_verified' : 'minor';
     
@@ -366,7 +349,19 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
       finalRole = 'admin';
     }
 
-    const uid = auth.currentUser?.uid || 'usr-' + Date.now();
+    let uid = auth.currentUser?.uid;
+    
+    try {
+      if (!uid) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password.trim());
+        uid = userCredential.user.uid;
+      }
+    } catch (err: any) {
+      console.error("Error creating auth user:", err);
+      setIsLoading(false);
+      setFormError(err.message || "Error al crear la cuenta de usuario.");
+      return;
+    }
 
     const newUser: AppUser = {
       id: uid,
@@ -400,6 +395,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
       });
     } catch (e) {
       console.error("Error guardando usuario en Firestore:", e);
+      setIsLoading(false);
       setFormError("Ocurrió un error al guardar tu perfil. Intenta de nuevo.");
       return;
     }

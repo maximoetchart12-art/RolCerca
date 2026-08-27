@@ -34,7 +34,7 @@ import {
 } from './components/RegisterModal';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc, setDoc, deleteDoc, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import { INITIAL_TABLES } from './data/mockTables';
 import { 
   TableSession, 
@@ -68,36 +68,9 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
   // State
-  const [tables, setTables] = useState<TableSession[]>(() => {
-    try {
-      const saved = localStorage.getItem('mesasrol_tables_v3');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const parsedClean = parsed.filter((item: any) => item && item.id && item.title);
-          const existingIds = new Set(parsedClean.map((t: any) => t.id));
-          const missingInitial = INITIAL_TABLES.filter(t => !existingIds.has(t.id));
-          return [...parsedClean, ...missingInitial];
-        }
-      }
-    } catch (e) {
-      console.warn('Error loading tables from localStorage:', e);
-    }
-    return INITIAL_TABLES;
-  });
+  const [tables, setTables] = useState<TableSession[]>(INITIAL_TABLES);
 
-  const [applications, setApplications] = useState<JoinApplication[]>(() => {
-    try {
-      const saved = localStorage.getItem('mesasrol_applications_v3');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {
-      // ignore
-    }
-    return [];
-  });
+  const [applications, setApplications] = useState<JoinApplication[]>([]);
 
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [detailTable, setDetailTable] = useState<TableSession | null>(null);
@@ -120,19 +93,7 @@ export default function App() {
   const [minorBlockedModalOpen, setMinorBlockedModalOpen] = useState(false);
 
   // Admin Verification Requests state (Real user requests only)
-  const [verificationRequests, setVerificationRequests] = useState<DMVerificationRequest[]>(() => {
-    try {
-      const saved = localStorage.getItem('rolcerca_admin_verification_requests');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Filter out legacy demo mock requests if any
-        return Array.isArray(parsed) ? parsed.filter((r: any) => !r.id?.startsWith('req-demo-')) : [];
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return [];
-  });
+  const [verificationRequests, setVerificationRequests] = useState<DMVerificationRequest[]>([]);
 
   const syncVerificationRequests = async () => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'moderator') {
@@ -171,57 +132,49 @@ export default function App() {
         }
       });
       setVerificationRequests(reqs);
-      localStorage.setItem('rolcerca_admin_verification_requests', JSON.stringify(reqs));
     } catch (e) {
       console.error("Error fetching verification requests from firestore", e);
     }
   };
 
   // Synchronize data with server database (so all users share tables and applications)
-  const fetchSharedData = async () => {
-    try {
-      const [resTables, resApps, resVerifs] = await Promise.all([
-        fetch('/api/tables').then((r) => r.json()).catch(() => null),
-        fetch('/api/applications').then((r) => r.json()).catch(() => null),
-        fetch('/api/admin/verifications').then((r) => r.json()).catch(() => null),
-      ]);
-
-      if (resTables && resTables.success && Array.isArray(resTables.tables)) {
-        let incomingTables = resTables.tables;
-        if (incomingTables.length === 0) {
-          incomingTables = [...INITIAL_TABLES];
-        } else {
-          // Merge any initial mock tables that are not yet in server tables
-          const existingIds = new Set(incomingTables.map((t: any) => t.id));
-          const missingInitial = INITIAL_TABLES.filter(t => !existingIds.has(t.id));
-          if (missingInitial.length > 0) {
-            incomingTables = [...incomingTables, ...missingInitial];
-          }
-        }
-        setTables(incomingTables);
-        localStorage.setItem('mesasrol_tables_v3', JSON.stringify(incomingTables));
-      }
-      if (resApps && resApps.success && Array.isArray(resApps.applications)) {
-        setApplications(resApps.applications);
-        localStorage.setItem('mesasrol_applications_v3', JSON.stringify(resApps.applications));
-      }
-      if (resVerifs && resVerifs.success && Array.isArray(resVerifs.requests)) {
-        setVerificationRequests(resVerifs.requests);
-        localStorage.setItem('rolcerca_admin_verification_requests', JSON.stringify(resVerifs.requests));
-      }
-    } catch (err) {
-      console.warn('Could not sync with server:', err);
-    }
-  };
-
-  // Initial load and periodic polling (every 8s) + on window focus
+  // Initial load and real-time subscriptions
   useEffect(() => {
-    fetchSharedData();
-    const interval = setInterval(fetchSharedData, 8000);
-    const onFocus = () => fetchSharedData();
-    window.addEventListener('focus', onFocus);
+    // 1. Tables Subscription
+    const unsubTables = onSnapshot(collection(db, 'tables'), (snapshot) => {
+      let incomingTables = snapshot.docs.map(doc => doc.data() as TableSession);
+      
+      if (incomingTables.length === 0) {
+        incomingTables = [...INITIAL_TABLES];
+      } else {
+        const existingIds = new Set(incomingTables.map(t => t.id));
+        const missingInitial = INITIAL_TABLES.filter(t => !existingIds.has(t.id));
+        if (missingInitial.length > 0) {
+          incomingTables = [...incomingTables, ...missingInitial];
+        }
+      }
+      setTables(incomingTables);
+    }, (error) => {
+      console.warn('Error fetching tables from Firestore:', error);
+    });
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    // 2. Applications Subscription
+    const unsubApps = onSnapshot(collection(db, 'applications'), (snapshot) => {
+      const incomingApps = snapshot.docs.map(doc => doc.data() as JoinApplication);
+      setApplications(incomingApps);
+    }, (error) => {
+      console.warn('Error fetching applications:', error);
+    });
+
+    // 3. Verifications Subscription
+    const unsubVerifs = onSnapshot(collection(db, 'verifications'), (snapshot) => {
+      const incomingVerifs = snapshot.docs.map(doc => doc.data() as GMVerificationRequest);
+      setVerificationRequests(incomingVerifs);
+    }, (error) => {
+      console.warn('Error fetching verifications:', error);
+    });
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
@@ -241,9 +194,10 @@ export default function App() {
     });
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
-      unsubscribe();
+      unsubTables();
+      unsubApps();
+      unsubVerifs();
+      unsubscribeAuth();
     };
   }, []);
 
@@ -260,13 +214,14 @@ export default function App() {
   };
 
   // User Completes Registration with DNI
-  const handleUserRegistered = (newUser: AppUser) => {
+  const handleUserRegistered = async (newUser: AppUser) => {
     setCurrentUser(newUser);
     setIsProfileVerified(newUser.isVerified);
 
     // Also add to admin verification requests list
-    const newReq: DMVerificationRequest = {
+    const newReq = {
       id: 'req-' + Date.now(),
+      userId: newUser.id,
       name: newUser.name,
       handle: newUser.handle.startsWith('@') ? newUser.handle : `@${newUser.handle}`,
       bio: 'Nuevo aventurero registrado en la plataforma.',
@@ -284,16 +239,11 @@ export default function App() {
       submittedAt: 'Recién',
     };
 
-    const updatedReqs = [newReq, ...verificationRequests];
-    setVerificationRequests(updatedReqs);
-    localStorage.setItem('rolcerca_admin_verification_requests', JSON.stringify(updatedReqs));
-
-    // Post verification to server
-    fetch('/api/admin/verifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newReq),
-    }).catch((e) => console.warn('Sync error:', e));
+    try {
+      await setDoc(doc(db, 'verifications', newReq.id), newReq);
+    } catch (e) {
+      console.warn('Sync error:', e);
+    }
 
     if (newUser.ageCategory === 'MENOR_JUVENIL') {
       showToast(`🌱 ¡Bienvenido Aventurero Juvenil ${newUser.handle}! Tu cuenta está configurada con protección para menores.`);
@@ -357,13 +307,17 @@ export default function App() {
         body: JSON.stringify({ email: verifyEmail, code: verifyCode }),
       })
         .then((res) => res.json())
-        .then((data) => {
+        .then(async (data) => {
           if (data.success) {
             showToast(`✅ ¡Correo ${verifyEmail} verificado exitosamente!`);
             if (currentUser) {
               const updated = { ...currentUser, isEmailVerified: true, emailVerifiedAt: new Date().toISOString() };
               setCurrentUser(updated);
-              localStorage.setItem('rolcerca_current_user_v2', JSON.stringify(updated));
+              try {
+                await updateDoc(doc(db, 'users', currentUser.id), { isEmailVerified: true, emailVerifiedAt: updated.emailVerifiedAt });
+              } catch (e) {
+                console.error('Error updating email verification in Firestore', e);
+              }
             }
           }
         })
@@ -399,7 +353,6 @@ export default function App() {
     });
 
     setVerificationRequests(updated);
-    localStorage.setItem('rolcerca_admin_verification_requests', JSON.stringify(updated));
 
     if (currentUser) {
       if (currentUser.id === requestId) {
@@ -438,7 +391,6 @@ export default function App() {
     });
 
     setVerificationRequests(updated);
-    localStorage.setItem('rolcerca_admin_verification_requests', JSON.stringify(updated));
 
     if (currentUser && currentUser.id === requestId) {
       const updatedUser = { ...currentUser, isVerified: false, verificationStatus: 'RECHAZADO' as const, rejectionReason: reason };
@@ -450,20 +402,12 @@ export default function App() {
   };
 
   const handleAttemptPublishTable = () => {
-    // Check if user is GM verified or has a profile
-    try {
-      const savedProfile = localStorage.getItem('mesasrol_user_profile');
-      if (savedProfile) {
-        const p = JSON.parse(savedProfile);
-        if (p.verificationStatus === 'approved' || p.isVerified) {
-          setPublishBlockedNotice(false);
-          setEditingTable(null);
-          setIsPublishModalOpen(true);
-          return;
-        }
-      }
-    } catch {
-      // ignore
+    // Check if user is GM verified
+    if (currentUser?.isVerified || currentUser?.verificationStatus === 'VERIFICADO') {
+      setPublishBlockedNotice(false);
+      setEditingTable(null);
+      setIsPublishModalOpen(true);
+      return;
     }
 
     if (!currentUser) {
@@ -558,41 +502,25 @@ export default function App() {
     }, 4500);
   };
 
-  const handleTableCreated = (newTable: TableSession) => {
-    const updated = [newTable, ...tables];
-    setTables(updated);
-    localStorage.setItem('mesasrol_tables_v3', JSON.stringify(updated));
-    setSelectedTableId(newTable.id);
-
-    // Persist to server so any friend / visitor sees it immediately
-    fetch('/api/tables', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTable),
-    })
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.success && Array.isArray(res.tables)) {
-          setTables(res.tables);
-        }
-      })
-      .catch((err) => console.warn('Error saving table to server:', err));
-
-    showToast(`¡Mesa "${newTable.title}" publicada con éxito! Ya se visualiza en el mapa.`);
+  const handleTableCreated = async (newTable: TableSession) => {
+    try {
+      await setDoc(doc(db, 'tables', newTable.id), newTable);
+      setSelectedTableId(newTable.id);
+      showToast(`¡Mesa "${newTable.title}" publicada con éxito! Ya se visualiza en el mapa.`);
+    } catch (err) {
+      console.error('Error saving table to Firestore:', err);
+      showToast('Error al publicar la mesa.');
+    }
   };
 
-  const handleTableUpdated = (updatedTable: TableSession) => {
-    const updated = tables.map((t) => (t.id === updatedTable.id ? updatedTable : t));
-    setTables(updated);
-    localStorage.setItem('mesasrol_tables_v3', JSON.stringify(updated));
-
-    fetch('/api/tables', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedTable),
-    }).catch((err) => console.warn('Error updating table on server:', err));
-
-    showToast(`¡Mesa "${updatedTable.title}" actualizada con éxito!`);
+  const handleTableUpdated = async (updatedTable: TableSession) => {
+    try {
+      await updateDoc(doc(db, 'tables', updatedTable.id), updatedTable as any);
+      showToast(`¡Mesa "${updatedTable.title}" actualizada con éxito!`);
+    } catch (err) {
+      console.error('Error updating table in Firestore:', err);
+      showToast('Error al actualizar la mesa.');
+    }
   };
 
   const handleEditTable = (table: TableSession) => {
@@ -601,54 +529,44 @@ export default function App() {
     setIsProfileModalOpen(false);
   };
 
-  const handleDeleteTable = (tableId: string) => {
-    const updated = tables.filter((t) => t.id !== tableId);
-    setTables(updated);
-    localStorage.setItem('mesasrol_tables_v3', JSON.stringify(updated));
-
-    fetch(`/api/tables/${encodeURIComponent(tableId)}`, {
-      method: 'DELETE',
-    }).catch((err) => console.warn('Error deleting table on server:', err));
-
-    showToast('La mesa ha sido eliminada.');
+  const handleDeleteTable = async (tableId: string) => {
+    try {
+      await deleteDoc(doc(db, 'tables', tableId));
+      showToast('La mesa ha sido eliminada.');
+    } catch (err) {
+      console.error('Error deleting table from Firestore:', err);
+      showToast('Error al eliminar la mesa.');
+    }
   };
 
-  const handleApplicationSubmitted = (newApp: JoinApplication) => {
-    const updated = [newApp, ...applications];
-    setApplications(updated);
-    localStorage.setItem('mesasrol_applications_v3', JSON.stringify(updated));
-
-    // Save application to server
-    fetch('/api/applications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newApp),
-    }).catch((err) => console.warn('Error saving application to server:', err));
-
-    // Increment slotsTaken for local interactivity
-    const updatedTables = tables.map((t) => {
-      if (t.id === newApp.tableId) {
+  const handleApplicationSubmitted = async (newApp: JoinApplication) => {
+    try {
+      await setDoc(doc(db, 'applications', newApp.id), newApp);
+      
+      const table = tables.find((t) => t.id === newApp.tableId);
+      if (table) {
         const updatedT = {
-          ...t,
-          slotsTaken: Math.min(t.slotsTotal, t.slotsTaken + 1),
+          ...table,
+          slotsTaken: Math.min(table.slotsTotal, table.slotsTaken + 1),
         };
-        // Also update table on server
-        fetch('/api/tables', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedT),
-        }).catch(() => {});
-        return updatedT;
+        await updateDoc(doc(db, 'tables', updatedT.id), updatedT as any);
       }
-      return t;
-    });
-    setTables(updatedTables);
-    localStorage.setItem('mesasrol_tables_v3', JSON.stringify(updatedTables));
-
-    showToast('¡Tu solicitud fue enviada al DM! Podés verla en "Mis Solicitudes".');
+      
+      showToast('¡Tu solicitud fue enviada al DM! Podés verla en "Mis Solicitudes".');
+    } catch (err) {
+      console.error('Error saving application to Firestore:', err);
+      showToast('Error al enviar la solicitud.');
+    }
   };
 
   const isUserMinor = currentUser?.role === 'minor' || currentUser?.ageCategory === 'MENOR_JUVENIL';
+
+  const myRelevantAppsCount = applications.filter(app => {
+    if (currentUser?.role === 'admin' || currentUser?.role === 'moderator') return true;
+    if (app.playerId === currentUser?.id || app.playerEmail === currentUser?.email) return true;
+    const gmTableIds = tables.filter(t => t.dmId === currentUser?.id || t.dmName === currentUser?.name).map(t => t.id);
+    return gmTableIds.includes(app.tableId);
+  }).length;
 
   return (
     <div className="min-h-screen bg-[#0F0F11] text-[#e2e8f0] flex flex-col selection:bg-[#800020] selection:text-white">
@@ -671,7 +589,7 @@ export default function App() {
         onLogout={handleLogout}
         pendingRequestsCount={verificationRequests.filter((r) => r.status === 'pending').length}
         isProfileVerified={isProfileVerified}
-        applicationsCount={applications.length}
+        applicationsCount={myRelevantAppsCount}
         totalTablesCount={tables.length}
         filteredCount={filteredTables.length}
         viewMode={viewMode}
@@ -945,8 +863,16 @@ export default function App() {
       <MyApplicationsDrawer
         isOpen={isApplicationsOpen}
         onClose={() => setIsApplicationsOpen(false)}
-        applications={applications}
+        applications={applications.filter(app => {
+          if (currentUser?.role === 'admin' || currentUser?.role === 'moderator') return true;
+          // Player's sent apps
+          if (app.playerId === currentUser?.id || app.playerEmail === currentUser?.email) return true;
+          // GM's received apps
+          const gmTableIds = tables.filter(t => t.dmId === currentUser?.id || t.dmName === currentUser?.name).map(t => t.id);
+          return gmTableIds.includes(app.tableId);
+        })}
         tables={tables}
+        currentUser={currentUser}
         onOpenTableDetail={(t) => setDetailTable(t)}
       />
 
@@ -983,6 +909,7 @@ export default function App() {
         onApproveRequest={handleApproveVerificationRequest}
         onRejectRequest={handleRejectVerificationRequest}
         onRefreshRequests={syncVerificationRequests}
+        isAdmin={currentUser?.role === 'admin' || currentUser?.role === 'moderator'}
       />
     </div>
   );

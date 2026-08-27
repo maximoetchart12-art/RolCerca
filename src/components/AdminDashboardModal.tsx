@@ -28,6 +28,7 @@ interface AdminDashboardModalProps {
   onApproveRequest: (requestId: string) => void;
   onRejectRequest: (requestId: string, reason: string) => void;
   onRefreshRequests?: () => void;
+  isAdmin?: boolean;
 }
 
 export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
@@ -37,10 +38,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   onApproveRequest,
   onRejectRequest,
   onRefreshRequests,
+  isAdmin = false,
 }) => {
   // Simple admin auth state (PIN default: 1234 or "admin" or bypass if unlocked)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('rolcerca_admin_auth') === 'true';
+    return isAdmin || localStorage.getItem('rolcerca_admin_auth') === 'true';
   });
   const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState(false);

@@ -5,6 +5,15 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { sendVerificationEmail, verifyCode } from "./server/emailService.js";
 import { getGoogleOAuthUrl, handleGoogleCallback } from "./server/googleAuth.js";
+import {
+  getAllTables,
+  saveTable,
+  deleteTable,
+  getAllApplications,
+  saveApplication,
+  getAllVerifications,
+  saveVerification,
+} from "./server/db.js";
 
 dotenv.config();
 
@@ -128,6 +137,91 @@ async function startServer() {
   });
 
   // ==========================================
+  // SHARED DATABASE & PERSISTENCE ROUTES
+  // ==========================================
+
+  // TABLES: Get all shared tables
+  app.get("/api/tables", (req, res) => {
+    try {
+      const tables = getAllTables();
+      res.json({ success: true, tables });
+    } catch (err: any) {
+      res.status(500).json({ error: "Error obteniendo mesas" });
+    }
+  });
+
+  // TABLES: Save or update a shared table
+  app.post("/api/tables", (req, res) => {
+    try {
+      const table = req.body;
+      if (!table || !table.id || !table.title) {
+        return res.status(400).json({ error: "Datos de mesa incompletos" });
+      }
+      const updatedTables = saveTable(table);
+      res.json({ success: true, table, tables: updatedTables });
+    } catch (err: any) {
+      res.status(500).json({ error: "Error guardando la mesa" });
+    }
+  });
+
+  // TABLES: Delete a table
+  app.delete("/api/tables/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedTables = deleteTable(id);
+      res.json({ success: true, tables: updatedTables });
+    } catch (err: any) {
+      res.status(500).json({ error: "Error eliminando mesa" });
+    }
+  });
+
+  // APPLICATIONS: Get all applications
+  app.get("/api/applications", (req, res) => {
+    try {
+      const applications = getAllApplications();
+      res.json({ success: true, applications });
+    } catch (err: any) {
+      res.status(500).json({ error: "Error obteniendo solicitudes" });
+    }
+  });
+
+  // APPLICATIONS: Save or update an application
+  app.post("/api/applications", (req, res) => {
+    try {
+      const application = req.body;
+      if (!application || !application.id || !application.tableId) {
+        return res.status(400).json({ error: "Datos de solicitud incompletos" });
+      }
+      const updatedApps = saveApplication(application);
+      res.json({ success: true, application, applications: updatedApps });
+    } catch (err: any) {
+      res.status(500).json({ error: "Error guardando solicitud" });
+    }
+  });
+
+  // VERIFICATIONS: Get all admin verification requests
+  app.get("/api/admin/verifications", (req, res) => {
+    try {
+      const requests = getAllVerifications();
+      res.json({ success: true, requests });
+    } catch (err: any) {
+      res.status(500).json({ error: "Error obteniendo verificaciones" });
+    }
+  });
+
+  // VERIFICATIONS: Submit or update a verification request
+  app.post("/api/admin/verifications", (req, res) => {
+    try {
+      const request = req.body;
+      if (!request || !request.id || !request.userId) {
+        return res.status(400).json({ error: "Datos de verificación incompletos" });
+      }
+      const updatedReqs = saveVerification(request);
+      res.json({ success: true, request, requests: updatedReqs });
+    } catch (err: any) {
+      res.status(500).json({ error: "Error guardando verificación" });
+    }
+  });
 
 
   // AI Assistant: Generate tailored character application pitch

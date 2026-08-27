@@ -16,19 +16,18 @@ service cloud.firestore {
     // Admin checking: assuming 'admin' or 'moderator' role in the user's document
     function isAdmin() {
       return isSignedIn() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator');
+         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator');
     }
-
     function isValidId(id) { 
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
     }
 
     // User validation
     function isValidUser(data) {
-      return data.keys().hasAll(['name', 'email', 'role']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.email is string && data.email.size() <= 200 &&
+      return data.keys().hasAll(['name', 'email', 'role']) && 
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 && 
+             data.email is string && data.email.size() <= 200 && 
              data.role is string && (data.role == 'guest' || data.role == 'minor' || data.role == 'adult_verified' || data.role == 'moderator' || data.role == 'admin');
     }
 
@@ -46,9 +45,9 @@ service cloud.firestore {
       // Users can update their own non-RBAC fields, or Admins can update anything.
       allow update: if isValidId(userId) && isValidUser(incoming()) && (
         isAdmin() ||
-        (isOwner(userId) &&
-         incoming().diff(existing()).affectedKeys().hasAny(['name', 'handle', 'birthDate', 'age', 'dni', 'isVerified']) &&
-         !incoming().diff(existing()).affectedKeys().hasAny(['role', 'email']) &&
+        (isOwner(userId) && 
+         // Allow updates to non-RBAC fields
+         !incoming().diff(existing()).affectedKeys().hasAny(['role', 'email']) && 
          incoming().role == existing().role
         )
       );
@@ -58,9 +57,9 @@ service cloud.firestore {
 
     // Table Validation
     function isValidTable(data) {
-      return data.keys().hasAll(['title', 'ownerId', 'status', 'createdAt']) &&
-             data.title is string && data.title.size() <= 200 &&
-             data.ownerId is string && data.ownerId == request.auth.uid &&
+      return data.keys().hasAll(['title', 'ownerId', 'status', 'createdAt']) && 
+             data.title is string && data.title.size() <= 200 && 
+             data.ownerId is string && data.ownerId == request.auth.uid && 
              data.status is string && (data.status == 'open' || data.status == 'closed' || data.status == 'completed');
     }
 
@@ -69,8 +68,8 @@ service cloud.firestore {
       allow read: if isValidId(tableId);
       
       // Creating tables: Must be signed in, ownerId must be their uid, role must not be minor.
-      allow create: if isValidId(tableId) && isSignedIn() &&
-                    isValidTable(incoming()) &&
+      allow create: if isValidId(tableId) && isSignedIn() && 
+                    isValidTable(incoming()) && 
                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'minor';
       
       // Updating tables: Must be owner or admin.
@@ -79,7 +78,21 @@ service cloud.firestore {
         (existing().ownerId == request.auth.uid && incoming().ownerId == existing().ownerId)
       );
       
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (existing().ownerId == request.auth.uid);
+    }
+
+    // Applications for Tables
+    match /applications/{appId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().playerId == request.auth.uid;
+      allow update, delete: if isAdmin() || existing().playerId == request.auth.uid || get(/databases/$(database)/documents/tables/$(existing().tableId)).data.ownerId == request.auth.uid;
+    }
+
+    // Admin Verifications
+    match /verifications/{reqId} {
+      allow read: if isAdmin() || existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
   }
 }

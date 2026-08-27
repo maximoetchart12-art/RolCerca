@@ -42,6 +42,8 @@ import {
 import { OpenStreetMapAutocomplete } from './OpenStreetMapAutocomplete';
 import { LeafletMap } from './LeafletMap';
 import { EmailVerificationModal } from './EmailVerificationModal';
+import { db, auth } from '../lib/firebase';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -124,63 +126,47 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         setActiveTab('gm');
       }
 
-      // Load saved profile data
-      try {
-        let loaded = false;
-        const saved = localStorage.getItem('mesasrol_user_profile');
-        if (saved) {
-          const data: Partial<UserProfile> = JSON.parse(saved);
-          setName(data.name || '');
-          setHandle(data.handle || '');
-          setEmail(data.email || '');
-          setIsEmailVerified(data.isEmailVerified !== undefined ? data.isEmailVerified : true);
-          setPlayerBio(data.playerBio || data.bio || '');
-          setGmBio(data.gmBio || data.bio || '');
-          setRoleType(data.roleType || (data.verificationStatus === 'approved' ? 'both' : 'player'));
-          setDni(data.dni || '');
-          setPhone(data.phone || '');
-          setPhotos(data.photos || []);
-          setLocation(data.location || null);
-          setAddress(data.address || '');
-          setDniPhotoUploaded(data.dniPhotoUploaded || false);
-          setDniFrontPhotoUrl(data.dniFrontPhoto || '');
-          setDniBackPhotoUrl(data.dniBackPhoto || '');
-          if (data.favoriteSystems && data.favoriteSystems.length > 0) {
-            setFavoriteSystems(data.favoriteSystems);
-          }
-          if (data.dniPhotoUploaded) {
-            setDniFrontFileName('DNI_Frente_Validado.jpg');
-            setDniBackFileName('DNI_Dorso_Validado.jpg');
-          }
+      const fetchProfile = async () => {
+        if (!auth.currentUser) return;
+        
+        try {
+          const docRef = doc(db, 'users', auth.currentUser.uid);
+          const docSnap = await getDoc(docRef);
           
-          setVerificationStatus(data.verificationStatus || (data.isVerified ? 'approved' : 'unsubmitted'));
-          setRejectionReason(data.rejectionReason || '');
-          loaded = true;
-        }
-
-        // Also check if current user is logged in in v2 session
-        const userSaved = localStorage.getItem('rolcerca_current_user_v2');
-        if (userSaved) {
-          const u = JSON.parse(userSaved);
-          if (!loaded || !name) {
-            setName(u.name || '');
-            setHandle(u.handle || '');
-            setEmail(u.email || '');
-            setIsEmailVerified(u.isEmailVerified !== undefined ? u.isEmailVerified : true);
-            setDni(u.dni || '');
-            setPhone(u.phone || '');
-            setAddress(u.address || '');
-            setLocation(u.location || null);
-            if (u.dniFrontPhoto) {
-              setDniFrontPhotoUrl(u.dniFrontPhoto);
-              setDniPhotoUploaded(true);
-              setDniFrontFileName('DNI_Frente.jpg');
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setName(data.name || '');
+            setHandle(data.handle || '');
+            setEmail(data.email || '');
+            setIsEmailVerified(data.isEmailVerified !== undefined ? data.isEmailVerified : true);
+            setPlayerBio(data.playerBio || data.bio || '');
+            setGmBio(data.gmBio || data.bio || '');
+            setRoleType(data.roleType || (data.verificationStatus === 'VERIFICADO' ? 'both' : 'player'));
+            setDni(data.dni || '');
+            setPhone(data.phone || '');
+            setPhotos(data.photos || []);
+            setLocation(data.location || null);
+            setAddress(data.address || '');
+            setDniPhotoUploaded(!!data.dniFrontPhoto);
+            setDniFrontPhotoUrl(data.dniFrontPhoto || '');
+            setDniBackPhotoUrl(data.dniBackPhoto || '');
+            if (data.favoriteSystems && data.favoriteSystems.length > 0) {
+              setFavoriteSystems(data.favoriteSystems);
             }
+            if (data.dniFrontPhoto) {
+              setDniFrontFileName('DNI_Frente_Validado.jpg');
+              setDniBackFileName('DNI_Dorso_Validado.jpg');
+            }
+            
+            setVerificationStatus(data.verificationStatus === 'VERIFICADO' ? 'approved' : (data.verificationStatus ? 'pending' : 'unsubmitted'));
+            setRejectionReason(data.rejectionReason || '');
           }
+        } catch (e) {
+          console.error("Error loading profile from Firestore:", e);
         }
-      } catch (e) {
-        console.error('Error loading profile:', e);
-      }
+      };
+      
+      fetchProfile();
     }
   }, [isOpen, publishAttemptBlockedNotice]);
 
@@ -197,12 +183,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   // Save Player Profile Changes (instant, no admin audit required)
-  const handleSavePlayerProfile = () => {
-    if (!name.trim()) return;
+  const handleSavePlayerProfile = async () => {
+    if (!name.trim() || !auth.currentUser) return;
 
     const formattedHandle = handle.startsWith('@') ? handle : `@${handle.replace(/\s+/g, '_').toLowerCase() || name.toLowerCase().replace(/\s+/g, '_')}`;
 
-    const profileData: UserProfile = {
+    const profileData: Partial<UserProfile> = {
       name: name.trim(),
       handle: formattedHandle,
       email: email.trim(),
@@ -227,36 +213,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       updatedAt: new Date().toISOString()
     };
 
-    localStorage.setItem('mesasrol_user_profile', JSON.stringify(profileData));
-
-    // Update logged in user state too
-    const userSaved = localStorage.getItem('rolcerca_current_user_v2');
-    if (userSaved) {
-      try {
-        const u = JSON.parse(userSaved);
-        const updatedUser = {
-          ...u,
-          name: profileData.name,
-          handle: profileData.handle,
-          email: profileData.email || u.email,
-          isEmailVerified,
-        };
-        localStorage.setItem('rolcerca_current_user_v2', JSON.stringify(updatedUser));
-      } catch {
-        // ignore
+    try {
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), profileData as any);
+      
+      if (onProfileSaved) {
+        onProfileSaved(profileData as UserProfile);
       }
+      
+      setHasSaved(true);
+      setTimeout(() => setHasSaved(false), 2500);
+    } catch (e) {
+      console.error("Error saving profile to Firestore:", e);
     }
-
-    if (onProfileSaved) {
-      onProfileSaved(profileData);
-    }
-
-    setHasSaved(true);
-    setTimeout(() => setHasSaved(false), 2500);
   };
 
   // Submit GM Verification Request to Admin
-  const handleSubmitGMVerification = () => {
+  const handleSubmitGMVerification = async () => {
     const errors: string[] = [];
     if (!name.trim()) errors.push('Tu nombre o apodo de rol es obligatorio.');
     if (!dni.trim() || dni.length < 7) errors.push('El DNI debe tener al menos 7 u 8 dígitos.');
@@ -299,7 +271,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       updatedAt: new Date().toISOString()
     };
 
-    localStorage.setItem('mesasrol_user_profile', JSON.stringify(profileData));
 
     // Save request to Admin Queue
     const adminReq: GMVerificationRequest = {
@@ -326,10 +297,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     };
 
     try {
-      const existingReqsRaw = localStorage.getItem('rolcerca_admin_verification_requests');
-      const reqList: GMVerificationRequest[] = existingReqsRaw ? JSON.parse(existingReqsRaw) : [];
-      const updatedList = [adminReq, ...reqList.filter(r => r.dni !== profileData.dni && r.handle !== profileData.handle)];
-      localStorage.setItem('rolcerca_admin_verification_requests', JSON.stringify(updatedList));
+      if (!auth.currentUser) throw new Error("Not authenticated");
+      
+      adminReq.id = 'req-' + auth.currentUser.uid + '-' + Date.now();
+      (adminReq as any).userId = auth.currentUser.uid;
+      
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), profileData as any);
+      await setDoc(doc(db, 'verifications', adminReq.id), adminReq);
+      
     } catch (e) {
       console.error('Error saving admin verification request:', e);
     }
@@ -1150,26 +1125,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         onClose={() => setIsEmailModalOpen(false)}
         userEmail={email || 'aventurero@ejemplo.com'}
         userName={name || 'Aventurero'}
-        onVerificationSuccess={() => {
+        onVerificationSuccess={async () => {
           setIsEmailVerified(true);
-          // Persist updated verification in storage
           try {
-            const saved = localStorage.getItem('mesasrol_user_profile');
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              parsed.isEmailVerified = true;
-              parsed.emailVerifiedAt = new Date().toISOString();
-              localStorage.setItem('mesasrol_user_profile', JSON.stringify(parsed));
-            }
-            const userSaved = localStorage.getItem('rolcerca_current_user_v2');
-            if (userSaved) {
-              const u = JSON.parse(userSaved);
-              u.isEmailVerified = true;
-              u.emailVerifiedAt = new Date().toISOString();
-              localStorage.setItem('rolcerca_current_user_v2', JSON.stringify(u));
+            if (auth.currentUser) {
+              await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                isEmailVerified: true,
+                emailVerifiedAt: new Date().toISOString()
+              });
             }
           } catch (e) {
-            // ignore
+            console.error('Error updating email verification status:', e);
           }
         }}
       />

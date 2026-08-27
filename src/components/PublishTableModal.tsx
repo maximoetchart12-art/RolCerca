@@ -153,19 +153,13 @@ export const PublishTableModal: React.FC<PublishTableModalProps> = ({
       let profileLat = '';
       let profileLng = '';
 
-      try {
-        const savedProfile = localStorage.getItem('mesasrol_user_profile');
-        if (savedProfile) {
-          const p = JSON.parse(savedProfile);
-          if (p.name) profileName = p.name;
-          if (p.handle) profileHandle = p.handle;
-          if (p.bio) profileBio = p.bio;
-          if (p.address) profileAddress = p.address;
-          if (p.location?.lat) profileLat = p.location.lat.toString();
-          if (p.location?.lng) profileLng = p.location.lng.toString();
-        }
-      } catch (e) {
-        console.error(e);
+      if (currentUser) {
+        if (currentUser.name) profileName = currentUser.name;
+        if (currentUser.handle) profileHandle = currentUser.handle;
+        if (currentUser.gmBio || currentUser.bio) profileBio = currentUser.gmBio || currentUser.bio || '';
+        if (currentUser.address) profileAddress = currentUser.address;
+        if (currentUser.location?.lat) profileLat = currentUser.location.lat.toString();
+        if (currentUser.location?.lng) profileLng = currentUser.location.lng.toString();
       }
 
       // Reset form if creating new table

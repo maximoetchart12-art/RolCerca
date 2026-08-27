@@ -100,6 +100,7 @@ export const JoinApplicationModal: React.FC<JoinApplicationModalProps> = ({
     const newApplication: JoinApplication = {
       id: 'app-' + Date.now(),
       tableId: table.id,
+      playerId: currentUser?.id,
       playerName,
       playerEmail,
       playerPhone: playerPhone || 'No especificado',

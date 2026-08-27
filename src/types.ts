@@ -188,6 +188,7 @@ export interface FilterState {
 export interface JoinApplication {
   id: string;
   tableId: string;
+  playerId?: string;
   playerName: string;
   playerEmail: string;
   playerPhone: string;
